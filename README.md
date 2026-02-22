@@ -5,7 +5,7 @@ A [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) server that c
 ## What This Does
 
 - **12 MCP tools** that let Claude read Bible text, search Scripture, navigate Logos, access your notes/highlights/favorites, check reading plans, and explore word studies and factbook entries
-- **A Socratic Bible Study agent** that guides you through Scripture using questions (not lectures), following a Reformed/Westminster theological framework with four questioning layers: Observation, Interpretation, Correlation, and Application
+- **A Socratic Bible Study agent** that guides you through Scripture using questions (not lectures), welcoming any denominational background, with four questioning layers: Observation, Interpretation, Correlation, and Application
 
 ## Prerequisites
 
@@ -96,7 +96,7 @@ Start Claude Code in the project directory, then:
 /agent socratic-bible-study
 ```
 
-The agent will ask what you want to study and guide you through Scripture using the Socratic method. It uses a Reformed/Westminster theological framework and works through four layers:
+The agent will ask what you want to study and guide you through Scripture using the Socratic method. It's tradition-neutral -- it works with any denominational background and presents multiple perspectives where Christians disagree. It guides you through four layers:
 
 1. **Observation** - "What does the text say?"
 2. **Interpretation** - "What does the text mean?"
@@ -107,7 +107,7 @@ The agent will ask what you want to study and guide you through Scripture using 
 
 - "Let's study Romans 8:28-30"
 - "I want to do a word study on 'justification'"
-- "What does the Bible teach about the covenant of grace?"
+- "What does the Bible teach about grace?"
 - "Walk me through Psalm 23"
 
 ## Project Structure
