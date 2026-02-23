@@ -146,9 +146,9 @@ function runDiagnoseBlocks() {
     const count = db.prepare("SELECT COUNT(*) as count FROM Blocks").get() as { count: number };
     console.log(`**Total blocks:** ${count.count}\n`);
     
-    // Show block types
-    const types = db.prepare("SELECT DISTINCT Type FROM Blocks LIMIT 20").all() as Array<{ Type: string }>;
-    console.log(`**Block types:** ${types.map(t => t.Type).join(", ")}\n`);
+    // Show block kinds (not Type)
+    const kinds = db.prepare("SELECT DISTINCT Kind FROM Blocks LIMIT 20").all() as Array<{ Kind: string }>;
+    console.log(`**Block kinds:** ${kinds.map(k => k.Kind).join(", ")}\n`);
     
     // Get a sample block with content
     const sample = db.prepare(`
@@ -172,14 +172,14 @@ function runDiagnoseBlocks() {
     if (firstSermon) {
       console.log(`\n**Blocks for sermon "${firstSermon.Title}" (Id=${firstSermon.Id}):**\n`);
       const sermonBlocks = db.prepare(`
-        SELECT Id, Type, Rank, LENGTH(Content) as ContentLength 
+        SELECT Id, Kind, Rank, LENGTH(Content) as ContentLength 
         FROM Blocks 
         WHERE DocumentId = ? 
         ORDER BY Rank
-      `).all(firstSermon.Id) as Array<{ Id: number; Type: string; Rank: number; ContentLength: number }>;
+      `).all(firstSermon.Id) as Array<{ Id: number; Kind: string; Rank: number; ContentLength: number }>;
       
       sermonBlocks.forEach(b => {
-        console.log(`  Block ${b.Id}: Type="${b.Type}", Rank=${b.Rank}, ContentLength=${b.ContentLength}`);
+        console.log(`  Block ${b.Id}: Kind="${b.Kind}", Rank=${b.Rank}, ContentLength=${b.ContentLength}`);
       });
     }
     
