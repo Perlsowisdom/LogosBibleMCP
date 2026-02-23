@@ -47,12 +47,16 @@ async function main() {
           let extra = "";
           // For sermons, show row count and sample
           if (name === "sermons" && tables.includes("Documents")) {
-            const sample = getTableSample(path, "Documents");
-            extra = `\n  **Documents table: ${sample.count} rows**`;
-            if (sample.sample) {
-              const keys = Object.keys(sample.sample).slice(0, 5);
-              const preview = keys.map(k => `${k}=${String(sample.sample![k]).substring(0, 30)}`).join(", ");
-              extra += `\n  Sample: ${preview}...`;
+            try {
+              const sample = getTableSample(path, "Documents");
+              extra = `\n  **Documents table: ${sample.count} rows**`;
+              if (sample.sample) {
+                const keys = Object.keys(sample.sample).slice(0, 5);
+                const preview = keys.map(k => `${k}=${String(sample.sample![k]).substring(0, 30)}`).join(", ");
+                extra += `\n  Sample: ${preview}...`;
+              }
+            } catch (e) {
+              extra = `\n  **Error reading Documents table: ${String(e)}**`;
             }
           }
           return `- **${name}**: ✓ Found\n  Path: \`${path}\`\n  Tables: ${tables.join(", ") || "(none)"}${extra}`;
