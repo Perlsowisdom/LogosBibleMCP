@@ -20,6 +20,7 @@ import {
   getUserSermons,
   listTables,
   listColumns,
+  getTableSample,
 } from "./services/sqlite-reader.js";
 
 function text(s: string) {
@@ -33,7 +34,7 @@ function err(s: string) {
 async function main() {
   const server = new McpServer({ name: SERVER_NAME, version: SERVER_VERSION });
 
-  // ── 0. diagnose ───────────────────────────────────────────────────────────
+  // ── 0. diagnose ──────────────────────────────────────
   server.tool(
     "diagnose",
     "Diagnose Logos data directory and database availability",
@@ -44,16 +45,15 @@ async function main() {
         if (exists) {
           const tables = listTables(path);
           let extra = "";
-          // For documentInfo, show tables and columns
-          if (name === "documentInfo" && tables.length > 0) {
-            const tableDetails = tables.map(t => {
-              const cols = listColumns(path, t);
-              return `${t}(${cols.slice(0, 5).join(", ")}${cols.length > 5 ? "..." : ""})`;
-            });
-            extra = `\n  Tables: ${tableDetails.join(", ")}`;
-          } else if (name === "sermons" && tables.includes("Documents")) {
-            const columns = listColumns(path, "Documents");
-            extra = `\n  Documents columns: ${columns.join(", ")}`;
+          // For sermons, show row count and sample
+          if (name === "sermons" && tables.includes("Documents")) {
+            const sample = getTableSample(path, "Documents");
+            extra = `\n  **Documents table: ${sample.count} rows**`;
+            if (sample.sample) {
+              const keys = Object.keys(sample.sample).slice(0, 5);
+              const preview = keys.map(k => `${k}=${String(sample.sample![k]).substring(0, 30)}`).join(", ");
+              extra += `\n  Sample: ${preview}...`;
+            }
           }
           return `- **${name}**: ✓ Found\n  Path: \`${path}\`\n  Tables: ${tables.join(", ") || "(none)"}${extra}`;
         }
@@ -65,10 +65,6 @@ async function main() {
         "",
         "**Database Status:**",
         ...dbStatus,
-        "",
-        LOGOS_DATA_DIR 
-          ? "If databases are not found, check that Logos is installed and you've created notes/highlights."
-          : "**To fix:** Set the `LOGOS_DATA_DIR` environment variable to your Logos data directory.",
       ];
       return text(sections.join("\n"));
     }

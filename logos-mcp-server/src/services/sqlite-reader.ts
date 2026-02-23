@@ -50,6 +50,23 @@ export function listColumns(dbPath: string, tableName: string): string[] {
   }
 }
 
+export function getTableSample(dbPath: string, tableName: string): { count: number; sample: Record<string, unknown> | null } {
+  if (!existsSync(dbPath)) {
+    return { count: 0, sample: null };
+  }
+  const db = openDb(dbPath);
+  try {
+    const count = db.prepare(`SELECT COUNT(*) as count FROM ${tableName}`).get() as { count: number };
+    if (count.count === 0) {
+      return { count: 0, sample: null };
+    }
+    const sample = db.prepare(`SELECT * FROM ${tableName} LIMIT 1`).get() as Record<string, unknown>;
+    return { count: count.count, sample };
+  } finally {
+    db.close();
+  }
+}
+
 // ─── Highlights ──────────────────────────────────────────────────────────────
 
 export function getUserHighlights(options: {
