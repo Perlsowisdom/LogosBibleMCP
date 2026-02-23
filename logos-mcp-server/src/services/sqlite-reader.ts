@@ -349,6 +349,21 @@ export function getUserNotes(options: {
 // ─── Sermons ────────────────────────────────────────────────────────────────
 
 /**
+ * Decode HTML entities
+ */
+function decodeHtmlEntities(text: string): string {
+  const entities = {
+    '&amp;': '&',
+    '&lt;': '<',
+    '&gt;': '>',
+    '&quot;': '"',
+    '&#39;': "'",
+    '&#xA;': '\n',
+  };
+  return text.replace(/&amp;|&lt;|&gt;|&quot;|&#39;|&#xA;/g, (match) => entities[match] || match);
+}
+
+/**
  * Strip HTML tags from Logos sermon content
  * Handles <Span><Run Text="..." /></Span> format
  */
@@ -358,16 +373,16 @@ function stripLogosHtml(html: string): string {
   // Remove remaining HTML tags
   text = text.replace(/<[^>]+>/g, '');
   // Decode common HTML entities
-  text = text.replace(/&amp;/g, '&')
-             .replace(/&lt;/g, '<')
-             .replace(/&gt;/g, '>')
-             .replace(/&quot;/g, '"')
-             .replace(/&#39;/g, "'");
+  text = decodeHtmlEntities(text);
   return text.trim();
 }
 
 export function getUserSermons(options: {
   title?: string;
+  after_date?: string; // Start date string (ISO format: YYYY-MM-DD)
+  before_date?: string; // End date string (ISO format: YYYY-MM-DD)
+  liturgical_season?: string; // advent, christmas, epiphany, lent, holy_week, easter, pentecost, ordinary
+  year?: number; // Year for liturgical season calculation (defaults to current year)
   limit?: number;
 } = {}): SermonResult[] {
   const dbPath = DB_PATHS.sermons;
@@ -384,13 +399,26 @@ export function getUserSermons(options: {
     let sql: string;
     const params: unknown[] = [];
 
+    // Calculate date range if liturgical_season is specified
+    let afterDate = options.after_date;
+    let beforeDate = options.before_date;
+    
+    if (options.liturgical_season) {
+      const year = options.year ?? new Date().getFullYear();
+      const seasonDates = getLiturgicalSeasonDates(year, options.liturgical_season);
+      if (seasonDates) {
+        afterDate = seasonDates.start;
+        beforeDate = seasonDates.end;
+      }
+    }
+    
     if (hasBlocks) {
-      // Join with Blocks to get actual content
+      // Join with Blocks to get actual content, use separator for block concatenation
       sql = `
         SELECT 
           d.Id, d.ExternalId, d.Title, d.Date, d.ModifiedDate, 
           d.AuthorName, d.Series, d.TagsJson,
-          GROUP_CONCAT(b.Content, '') as Content
+          GROUP_CONCAT(b.Content, x'0A0A') as Content
         FROM Documents d
         LEFT JOIN Blocks b ON d.Id = b.DocumentId AND b.IsDeleted = 0
         WHERE d.IsDeleted = 0
@@ -415,17 +443,35 @@ export function getUserSermons(options: {
       params.push(`%${options.title}%`);
     }
 
-    if (hasBlocks) {
-      sql += " GROUP BY d.Id";
-      sql += " ORDER BY d.ModifiedDate DESC";
-    } else {
-      sql += " ORDER BY ModifiedDate DESC";
+    // Add date filters
+    if (afterDate) {
+      if (hasBlocks) {
+        sql += " AND DATE(d.Date) >= ?";
+      } else {
+        sql += " AND DATE(Date) >= ?";
+      }
+      params.push(afterDate);
     }
 
-    if (options.limit) {
-      sql += " LIMIT ?";
-      params.push(options.limit);
+    if (beforeDate) {
+      if (hasBlocks) {
+        sql += " AND DATE(d.Date) <= ?";
+      } else {
+        sql += " AND DATE(Date) <= ?";
+      }
+      params.push(beforeDate);
     }
+
+    if (hasBlocks) {
+      sql += " GROUP BY d.Id";
+      sql += " ORDER BY d.Date DESC";
+    } else {
+      sql += " ORDER BY Date DESC";
+    }
+
+    const limit = options.limit ?? 20;
+    sql += " LIMIT ?";
+    params.push(limit);
 
     const rows = db.prepare(sql).all(...params) as Array<{
       Id: number;
@@ -456,6 +502,110 @@ export function getUserSermons(options: {
   } finally {
     db.close();
   }
+}
+
+/**
+ * Calculate liturgical season date ranges for a given year.
+ * Note: Many seasons depend on Easter, which varies each year.
+ */
+function getLiturgicalSeasonDates(year: number, season: string): { start: string; end: string } | null {
+  // Calculate Easter date using the Anonymous Gregorian algorithm
+  const easter = getEasterDate(year);
+  const easterISO = easter.toISOString().split('T')[0];
+  
+  switch (season.toLowerCase()) {
+    case 'advent':
+      // Advent starts 4 Sundays before Christmas
+      const christmas = new Date(year, 11, 25);
+      const adventStart = new Date(christmas);
+      adventStart.setDate(christmas.getDate() - 21 - christmas.getDay());
+      return {
+        start: adventStart.toISOString().split('T')[0],
+        end: `${year}-12-24`
+      };
+    case 'christmas':
+      return {
+        start: `${year}-12-25`,
+        end: `${year + 1}-01-05`
+      };
+    case 'epiphany':
+      return {
+        start: `${year}-01-06`,
+        end: `${year}-02-02` // Presentation/Candlemas
+      };
+    case 'lent':
+      // Lent starts Ash Wednesday (46 days before Easter)
+      const ashWednesday = new Date(easter);
+      ashWednesday.setDate(easter.getDate() - 46);
+      const palmSunday = new Date(easter);
+      palmSunday.setDate(easter.getDate() - 7);
+      return {
+        start: ashWednesday.toISOString().split('T')[0],
+        end: palmSunday.toISOString().split('T')[0]
+      };
+    case 'holy_week':
+      const palmSundayHW = new Date(easter);
+      palmSundayHW.setDate(easter.getDate() - 7);
+      const holySaturday = new Date(easter);
+      holySaturday.setDate(easter.getDate() - 1);
+      return {
+        start: palmSundayHW.toISOString().split('T')[0],
+        end: holySaturday.toISOString().split('T')[0]
+      };
+    case 'easter':
+      const pentecost = new Date(easter);
+      pentecost.setDate(easter.getDate() + 49);
+      return {
+        start: easterISO,
+        end: pentecost.toISOString().split('T')[0]
+      };
+    case 'pentecost':
+      const pentecostStart = new Date(easter);
+      pentecostStart.setDate(easter.getDate() + 49);
+      const pentecostEnd = new Date(easter);
+      pentecostEnd.setDate(easter.getDate() + 56);
+      return {
+        start: pentecostStart.toISOString().split('T')[0],
+        end: pentecostEnd.toISOString().split('T')[0]
+      };
+    case 'ordinary':
+    case 'ordinary_time':
+      // Ordinary Time: Jan 7 until Ash Wednesday, and Monday after Pentecost until Advent
+      const ashWednesdayOT = new Date(easter);
+      ashWednesdayOT.setDate(easter.getDate() - 46);
+      const pentecostOT = new Date(easter);
+      pentecostOT.setDate(easter.getDate() + 50);
+      const adventNext = new Date(year, 11, 25);
+      adventNext.setDate(adventNext.getDate() - 21 - adventNext.getDay());
+      // Return the longer period (after Pentecost)
+      return {
+        start: pentecostOT.toISOString().split('T')[0],
+        end: adventNext.toISOString().split('T')[0]
+      };
+    default:
+      return null;
+  }
+}
+
+/**
+ * Calculate Easter date using Anonymous Gregorian algorithm
+ */
+function getEasterDate(year: number): Date {
+  const a = year % 19;
+  const b = Math.floor(year / 100);
+  const c = year % 100;
+  const d = Math.floor(b / 4);
+  const e = b % 4;
+  const f = Math.floor((b + 8) / 25);
+  const g = Math.floor((b - f + 1) / 3);
+  const h = (19 * a + b - d - g + 15) % 30;
+  const i = Math.floor(c / 4);
+  const k = c % 4;
+  const l = (32 + 2 * e + 2 * i - h - k) % 7;
+  const m = Math.floor((a + 11 * h + 22 * l) / 451);
+  const month = Math.floor((h + l - 7 * m + 114) / 31) - 1;
+  const day = ((h + l - 7 * m + 114) % 31) + 1;
+  return new Date(year, month, day);
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────

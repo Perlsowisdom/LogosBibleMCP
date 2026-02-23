@@ -190,21 +190,32 @@ function runDiagnoseBlocks() {
 }
 
 function runTestSermons() {
-  console.log("**Testing getUserSermons**\n");
+  console.log(`**Testing getUserSermons**\n`);
   
-  const sermons = getUserSermons({ limit: 3 });
+  // Parse CLI args for testing
+  const args = process.argv.slice(3);
+  const params: Record<string, string | number | undefined> = {};
   
-  if (sermons.length === 0) {
-    console.log("No sermons found.");
-    return;
+  for (const arg of args) {
+    const [key, value] = arg.split(":");
+    if (key && value) {
+      if (key === "limit" || key === "year") {
+        params[key] = parseInt(value, 10);
+      } else {
+        params[key] = value;
+      }
+    }
   }
   
+  console.log(`**Parameters:** ${JSON.stringify(params) || "none"}\n`);
+  
+  const sermons = getUserSermons(params);
   console.log(`Found ${sermons.length} sermons:\n`);
   
   for (const s of sermons) {
     console.log(`### ${s.title}`);
     console.log(`Author: ${s.author || "Unknown"}`);
-    console.log(`Date: ${s.modifiedDate || s.createdDate || "Unknown"}`);
+    console.log(`Date: ${s.createdDate || "Unknown"}`);
     console.log(`Series: ${s.series || "None"}`);
     console.log(`Content length: ${s.content?.length || 0} chars`);
     console.log(`Content preview: ${s.content?.substring(0, 200) || "(no content)"}...`);

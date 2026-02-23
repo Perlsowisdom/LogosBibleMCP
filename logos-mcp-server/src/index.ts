@@ -311,22 +311,27 @@ async function main() {
     "Read the user's sermon documents from Logos Bible Software",
     {
       title: z.string().optional().describe("Filter by sermon title (partial match)"),
+      after_date: z.string().optional().describe("Start date (ISO: YYYY-MM-DD)"),
+      before_date: z.string().optional().describe("End date (ISO: YYYY-MM-DD)"),
+      liturgical_season: z.string().optional().describe("Filter by liturgical season: advent, christmas, epiphany, lent, holy_week, easter, pentecost, ordinary"),
+      year: z.number().optional().describe("Year for liturgical season calculation (defaults to current year)"),
       limit: z.number().optional().describe("Max sermons to return (default: 20)"),
     },
-    async ({ title, limit }) => {
-      const sermons = getUserSermons({ title, limit: limit ?? 20 });
+    async ({ title, after_date, before_date, liturgical_season, year, limit }) => {
+      const sermons = getUserSermons({ title, after_date, before_date, liturgical_season, year, limit: limit ?? 20 });
       if (sermons.length === 0) {
-        return text(`No sermons found in local database.
+        return text(`No sermons found matching criteria.
+
+**Search parameters:**
+- Title filter: ${title || "none"}
+- Date range: ${after_date || "any"} to ${before_date || "any"}
+- Liturgical season: ${liturgical_season || "none"}
+- Limit: ${limit ?? 20}
 
 **Possible reasons:**
 1. **Sermons haven't synced** - Open Logos and ensure your sermons are synced to this device
 2. **Sermon Builder not used** - This tool reads from Logos Sermon Builder
-3. **Database is empty** - The local Sermon.db exists but contains no documents
-
-**To sync sermons:**
-- Open Logos Bible Software
-- Go to Documents → Sermons
-- Ensure documents are downloaded/synced locally
+3. **No matching sermons** - Try adjusting your filters
 
 **Sermon database location:**
 ${DB_PATHS.sermons}`);
