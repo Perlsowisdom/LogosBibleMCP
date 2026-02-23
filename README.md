@@ -62,17 +62,16 @@ Add to your MCP client config (Claude Desktop, etc.):
 |------|-------------|
 | `get_user_sermons` | Read sermon documents from Logos |
 
-**Sermon Filtering Options:**
+**Parameters:**
 
-```
-get_user_sermons
-  title: "partial title match"
-  after_date: "2025-01-01"        # ISO date
-  before_date: "2025-12-31"       # ISO date
-  liturgical_season: "lent"       # advent, christmas, epiphany, lent, holy_week, easter, pentecost, ordinary
-  year: 2025                      # For liturgical season calculation
-  limit: 20                       # Max results
-```
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `title` | string | Partial title match |
+| `after_date` | string | Start date (ISO: `YYYY-MM-DD`) |
+| `before_date` | string | End date (ISO: `YYYY-MM-DD`) |
+| `liturgical_season` | string | `advent` `christmas` `epiphany` `lent` `holy_week` `easter` `pentecost` `ordinary` |
+| `year` | number | Year for liturgical season calculation |
+| `limit` | number | Max results (default: 20) |
 
 ### User Data
 
