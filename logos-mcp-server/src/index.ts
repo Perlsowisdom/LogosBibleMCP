@@ -18,6 +18,7 @@ import {
   getReadingProgress,
   getUserNotes,
   getUserSermons,
+  listTables,
 } from "./services/sqlite-reader.js";
 
 function text(s: string) {
@@ -39,7 +40,11 @@ async function main() {
     async () => {
       const dbStatus = Object.entries(DB_PATHS).map(([name, path]) => {
         const exists = existsSync(path);
-        return `- **${name}**: ${exists ? "✓ Found" : "✗ Not found"}\n  Path: \`${path}\``;
+        if (exists) {
+          const tables = listTables(path);
+          return `- **${name}**: ✓ Found\n  Path: \`${path}\`\n  Tables: ${tables.join(", ") || "(none)"}`;
+        }
+        return `- **${name}**: ✗ Not found\n  Path: \`${path}\``;
       });
       
       const sections = [

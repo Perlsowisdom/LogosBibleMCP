@@ -17,16 +17,24 @@ function openDb(path: string): Database.Database {
     throw new Error(`Database not found: ${path}
 
 To fix this:
-1. Make sure Logos Bible Software is installed and you've created notes/sermons
-2. If your Logos data is in a custom location, set the LOGOS_DATA_DIR environment variable
-   Example: LOGOS_DATA_DIR=C:\\Users\\YourName\\Documents\\Logos\\Data\\abc123.efg
-3. On Windows, the default path is: %LOCALAPPDATA%\\Logos\\Logos\\Documents\\[random-id]
-
-Run this to find your Logos data directory:
-   Windows: dir "%LOCALAPPDATA%\\Logos\\Logos\\Documents" /s /b | findstr /i ".db$"
-   macOS: find ~/Library/Application\\ Support/Logos4 -name "*.db"`);
+1. Make sure Logos Bible Software is installed and has been run at least once
+2. Set LOGOS_DATA_DIR environment variable to your Logos data folder, e.g.:
+   LOGOS_DATA_DIR=C:\\Users\\YourName\\AppData\\Local\\Logos\\Documents\\abc123.efg`);
   }
   return new Database(path, { readonly: true, fileMustExist: true });
+}
+
+export function listTables(dbPath: string): string[] {
+  if (!existsSync(dbPath)) {
+    return [];
+  }
+  const db = openDb(dbPath);
+  try {
+    const rows = db.prepare("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name").all() as Array<{ name: string }>;
+    return rows.map(r => r.name);
+  } finally {
+    db.close();
+  }
 }
 
 // ─── Highlights ──────────────────────────────────────────────────────────────
