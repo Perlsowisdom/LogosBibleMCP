@@ -3,7 +3,8 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
-import { SERVER_NAME, SERVER_VERSION } from "./config.js";
+import { SERVER_NAME, SERVER_VERSION, LOGOS_DATA_DIR, DB_PATHS } from "./config.js";
+import { existsSync } from "fs";
 
 // Service imports
 import { getBibleText, searchBible } from "./services/biblia-api.js";
@@ -29,6 +30,36 @@ function err(s: string) {
 
 async function main() {
   const server = new McpServer({ name: SERVER_NAME, version: SERVER_VERSION });
+
+  // ── 0. diagnose ───────────────────────────────────────────────────────────
+  server.tool(
+    "diagnose",
+    "Diagnose Logos data directory and database availability",
+    {},
+    async () => {
+      const dbStatus = Object.entries(DB_PATHS).map(([name, path]) => {
+        const exists = existsSync(path);
+        return `- **${name}**: ${exists ? "✓ Found" : "✗ Not found"}\n  Path: \`${path}\``;
+      });
+      
+      const sections = [
+        `**Logos Data Directory**: \`${LOGOS_DATA_DIR || "(not found)"}\``,
+        "",
+        "**Database Status:**",
+        ...dbStatus,
+        "",
+        LOGOS_DATA_DIR 
+          ? "If databases are not found, check that Logos is installed and you've created notes/highlights."
+          : "**To fix:** Set the `LOGOS_DATA_DIR` environment variable to your Logos data directory.",
+        "",
+        "On Windows, run this in Command Prompt to find your data:",
+        "```",
+        `dir "%LOCALAPPDATA%\\Logos\\Logos\\Documents" /s /b | findstr /i "notestool.db"`,
+        "```",
+      ];
+      return text(sections.join("\n"));
+    }
+  );
 
   // ── 1. navigate_passage ──────────────────────────────────────────────────
   server.tool(
