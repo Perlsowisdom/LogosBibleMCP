@@ -348,6 +348,24 @@ export function getUserNotes(options: {
 
 // ─── Sermons ────────────────────────────────────────────────────────────────
 
+/**
+ * Strip HTML tags from Logos sermon content
+ * Handles <Span><Run Text="..." /></Span> format
+ */
+function stripLogosHtml(html: string): string {
+  // Extract text from Run Text attributes
+  let text = html.replace(/<Run Text="([^"]*)"\s*\/>/g, '$1');
+  // Remove remaining HTML tags
+  text = text.replace(/<[^>]+>/g, '');
+  // Decode common HTML entities
+  text = text.replace(/&amp;/g, '&')
+             .replace(/&lt;/g, '<')
+             .replace(/&gt;/g, '>')
+             .replace(/&quot;/g, '"')
+             .replace(/&#39;/g, "'");
+  return text.trim();
+}
+
 export function getUserSermons(options: {
   title?: string;
   limit?: number;
@@ -359,19 +377,48 @@ export function getUserSermons(options: {
   
   const db = openDb(dbPath);
   try {
-    let sql = `
-      SELECT Id, ExternalId, Title, Notes, Date,
-             ModifiedDate, AuthorName, Series, TagsJson, IsDeleted
-      FROM Documents
-      WHERE IsDeleted = 0
-    `;
+    // Check if Blocks table exists for content
+    const tables = listTables(dbPath);
+    const hasBlocks = tables.includes("Blocks");
+    
+    let sql: string;
     const params: unknown[] = [];
 
+    if (hasBlocks) {
+      // Join with Blocks to get actual content
+      sql = `
+        SELECT 
+          d.Id, d.ExternalId, d.Title, d.Date, d.ModifiedDate, 
+          d.AuthorName, d.Series, d.TagsJson,
+          GROUP_CONCAT(b.Content, '') as Content
+        FROM Documents d
+        LEFT JOIN Blocks b ON d.Id = b.DocumentId AND b.IsDeleted = 0
+        WHERE d.IsDeleted = 0
+      `;
+    } else {
+      // Fallback to just Documents table (Notes column is usually NULL)
+      sql = `
+        SELECT 
+          Id, ExternalId, Title, Notes as Content, Date, ModifiedDate, 
+          AuthorName, Series, TagsJson
+        FROM Documents
+        WHERE IsDeleted = 0
+      `;
+    }
+
     if (options.title) {
-      sql += " AND Title LIKE ?";
+      if (hasBlocks) {
+        sql += " AND d.Title LIKE ?";
+      } else {
+        sql += " AND Title LIKE ?";
+      }
       params.push(`%${options.title}%`);
     }
 
+    if (hasBlocks) {
+      sql += " GROUP BY d.Id";
+    }
+    
     sql += " ORDER BY ModifiedDate DESC";
 
     if (options.limit) {
@@ -383,20 +430,19 @@ export function getUserSermons(options: {
       Id: number;
       ExternalId: string;
       Title: string;
-      Notes: string | null;
+      Content: string | null;
       Date: string | null;
       ModifiedDate: string | null;
       AuthorName: string | null;
       Series: string | null;
       TagsJson: string | null;
-      IsDeleted: number;
     }>;
 
     return rows.map((r) => ({
       sermonId: r.Id,
       externalId: r.ExternalId,
       title: r.Title,
-      content: r.Notes,
+      content: r.Content ? stripLogosHtml(r.Content) : null,
       createdDate: r.Date,
       modifiedDate: r.ModifiedDate,
       author: r.AuthorName,
