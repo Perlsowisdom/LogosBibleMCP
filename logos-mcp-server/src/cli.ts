@@ -115,20 +115,96 @@ function runDiagnoseRaw() {
   }
 }
 
+function runDiagnoseBlocks() {
+  console.log(`**Logos Data Directory**: \`${LOGOS_DATA_DIR || "(not found)"}\``);
+  console.log("");
+  
+  const sermonsPath = DB_PATHS.sermons;
+  if (!existsSync(sermonsPath)) {
+    console.log("**sermons**: ✗ Not found");
+    return;
+  }
+  
+  console.log("**Blocks Table Analysis**\n");
+  console.log(`Path: \`${sermonsPath}\`\n`);
+  
+  const db = new Database(sermonsPath, { readonly: true });
+  try {
+    // Check Blocks table exists
+    const tables = listTables(sermonsPath);
+    if (!tables.includes("Blocks")) {
+      console.log("No Blocks table found.");
+      return;
+    }
+    
+    const columns = listColumns(sermonsPath, "Blocks");
+    console.log(`**Blocks table columns (${columns.length}):**`);
+    columns.forEach(c => console.log(`  - ${c}`));
+    console.log("");
+    
+    // Count blocks
+    const count = db.prepare("SELECT COUNT(*) as count FROM Blocks").get() as { count: number };
+    console.log(`**Total blocks:** ${count.count}\n`);
+    
+    // Show block types
+    const types = db.prepare("SELECT DISTINCT Type FROM Blocks LIMIT 20").all() as Array<{ Type: string }>;
+    console.log(`**Block types:** ${types.map(t => t.Type).join(", ")}\n`);
+    
+    // Get a sample block with content
+    const sample = db.prepare(`
+      SELECT * FROM Blocks 
+      WHERE Content IS NOT NULL AND Content != '' 
+      LIMIT 1
+    `).get() as Record<string, unknown> | undefined;
+    
+    if (sample) {
+      console.log("**Sample block with content:**\n");
+      for (const [key, value] of Object.entries(sample)) {
+        const displayValue = value === null ? "NULL" : 
+          typeof value === "string" && value.length > 300 ? value.substring(0, 300) + "..." : 
+          String(value);
+        console.log(`  ${key}: ${displayValue}`);
+      }
+    }
+    
+    // Show blocks for first sermon
+    const firstSermon = db.prepare("SELECT Id, Title, ExternalId FROM Documents WHERE IsDeleted = 0 LIMIT 1").get() as { Id: number; Title: string; ExternalId: string } | undefined;
+    if (firstSermon) {
+      console.log(`\n**Blocks for sermon "${firstSermon.Title}" (Id=${firstSermon.Id}):**\n`);
+      const sermonBlocks = db.prepare(`
+        SELECT Id, Type, Rank, LENGTH(Content) as ContentLength 
+        FROM Blocks 
+        WHERE DocumentId = ? 
+        ORDER BY Rank
+      `).all(firstSermon.Id) as Array<{ Id: number; Type: string; Rank: number; ContentLength: number }>;
+      
+      sermonBlocks.forEach(b => {
+        console.log(`  Block ${b.Id}: Type="${b.Type}", Rank=${b.Rank}, ContentLength=${b.ContentLength}`);
+      });
+    }
+    
+  } finally {
+    db.close();
+  }
+}
+
 const command = process.argv[2];
 
 if (command === "diagnose") {
   runDiagnose();
 } else if (command === "diagnose-raw") {
   runDiagnoseRaw();
+} else if (command === "diagnose-blocks") {
+  runDiagnoseBlocks();
 } else {
   console.log(`Logos MCP CLI
 
 Usage: logos-mcp-server <command>
 
 Commands:
-  diagnose       Check Logos data directory and database availability
-  diagnose-raw   Show detailed Documents table structure for debugging
+  diagnose        Check Logos data directory and database availability
+  diagnose-raw    Show detailed Documents table structure for debugging
+  diagnose-blocks Show Blocks table structure (where actual content lives)
 `);
   process.exit(1);
 }
