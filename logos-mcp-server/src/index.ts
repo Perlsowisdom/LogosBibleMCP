@@ -18,6 +18,7 @@ import {
   getReadingProgress,
   getUserNotes,
   getUserSermons,
+  getAllDocuments,
   listTables,
   listColumns,
 } from "./services/sqlite-reader.js";
@@ -44,8 +45,14 @@ async function main() {
         if (exists) {
           const tables = listTables(path);
           let extra = "";
-          // For sermons, show Documents columns
-          if (name === "sermons" && tables.includes("Documents")) {
+          // For documentInfo, show tables and columns
+          if (name === "documentInfo" && tables.length > 0) {
+            const tableDetails = tables.map(t => {
+              const cols = listColumns(path, t);
+              return `${t}(${cols.slice(0, 5).join(", ")}${cols.length > 5 ? "..." : ""})`;
+            });
+            extra = `\n  Tables: ${tableDetails.join(", ")}`;
+          } else if (name === "sermons" && tables.includes("Documents")) {
             const columns = listColumns(path, "Documents");
             extra = `\n  Documents columns: ${columns.join(", ")}`;
           }
@@ -319,6 +326,30 @@ async function main() {
         return `### ${s.title}${scripture}\n*${date}*\n\n${content}...`;
       });
       return text(`Found ${sermons.length} sermons:\n\n${lines.join("\n\n---\n\n")}`);
+    }
+  );
+
+  // ── 14. get_all_documents ────────────────────────────────────────────────
+  server.tool(
+    "get_all_documents",
+    "List all documents from Logos (sermons, notes, clippings, etc.)",
+    {
+      document_type: z.string().optional().describe("Filter by document type (e.g., 'Sermon', 'Note', 'Clipping')"),
+      title: z.string().optional().describe("Filter by title (partial match)"),
+      limit: z.number().optional().describe("Max documents to return (default: 50)"),
+    },
+    async ({ document_type, title, limit }) => {
+      const documents = getAllDocuments({ documentType: document_type, title, limit: limit ?? 50 });
+      if (documents.length === 0) {
+        return text("No documents found.");
+      }
+      const lines = documents.map((d) => {
+        const type = d.documentType ? `[${d.documentType}]` : "[Unknown]";
+        const date = d.modifiedDate ?? d.createdDate ?? "";
+        const author = d.author ? ` by ${d.author}` : "";
+        return `- **${d.title}** ${type}${author} — ${date}`;
+      });
+      return text(`Found ${documents.length} documents:\n\n${lines.join("\n")}`);
     }
   );
 

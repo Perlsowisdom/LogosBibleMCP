@@ -391,6 +391,99 @@ export function getUserSermons(options: {
   }
 }
 
+// ─── Document Info (All Documents) ─────────────────────────────────────────
+
+export interface DocumentResult {
+  documentId: string;
+  title: string;
+  documentType: string;
+  createdDate: string | null;
+  modifiedDate: string | null;
+  author: string | null;
+  resourceId: string | null;
+}
+
+export function getAllDocuments(options: {
+  documentType?: string;
+  title?: string;
+  limit?: number;
+} = {}): DocumentResult[] {
+  const dbPath = DB_PATHS.documentInfo;
+  if (!existsSync(dbPath)) {
+    return [];
+  }
+  
+  const db = openDb(dbPath);
+  try {
+    // First, let's see what tables exist
+    const tables = db.prepare("SELECT name FROM sqlite_master WHERE type='table'").all() as Array<{ name: string }>;
+    
+    // Try to find the right table - might be Documents, DocumentInfo, or similar
+    let tableName = "Documents";
+    if (!tables.find(t => t.name === "Documents")) {
+      // Try other common names
+      for (const candidate of ["DocumentInfo", "Documents", "Document", "Items"]) {
+        if (tables.find(t => t.name === candidate)) {
+          tableName = candidate;
+          break;
+        }
+      }
+    }
+    
+    let sql = `SELECT * FROM ${tableName} WHERE 1=1`;
+    const params: unknown[] = [];
+
+    // Get column names first to build proper query
+    const columns = db.prepare(`PRAGMA table_info(${tableName})`).all() as Array<{
+      name: string;
+      type: string;
+    }>;
+    const colNames = columns.map(c => c.name.toLowerCase());
+
+    // Dynamic filtering based on available columns
+    if (options.documentType && colNames.includes("documenttype")) {
+      sql += " AND DocumentType LIKE ?";
+      params.push(`%${options.documentType}%`);
+    }
+    if (options.title && colNames.includes("title")) {
+      sql += " AND Title LIKE ?";
+      params.push(`%${options.title}%`);
+    }
+
+    // Order by modified date if available
+    if (colNames.includes("modifieddate")) {
+      sql += " ORDER BY ModifiedDate DESC";
+    } else if (colNames.includes("createddate")) {
+      sql += " ORDER BY CreatedDate DESC";
+    }
+
+    if (options.limit) {
+      sql += " LIMIT ?";
+      params.push(options.limit);
+    }
+
+    const rows = db.prepare(sql).all(...params) as Record<string, unknown>[];
+    
+    return rows.map((r) => {
+      const row = r as Record<string, unknown>;
+      return {
+        documentId: String(row.DocumentId ?? row.Id ?? row.ExternalId ?? ""),
+        title: String(row.Title ?? row.Name ?? ""),
+        documentType: String(row.DocumentType ?? row.Type ?? ""),
+        createdDate: row.CreatedDate ? String(row.CreatedDate) : null,
+        modifiedDate: row.ModifiedDate ? String(row.ModifiedDate) : null,
+        author: row.Author ? String(row.Author) : null,
+        resourceId: row.ResourceId ? String(row.ResourceId) : null,
+      };
+    });
+  } catch (e) {
+    console.error("Error querying documents:", e);
+    return [];
+  } finally {
+    db.close();
+  }
+}
+
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function safeParseArray(json: string | null): string[] {
