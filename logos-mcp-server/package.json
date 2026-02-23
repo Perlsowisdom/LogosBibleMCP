@@ -5,7 +5,8 @@
   "type": "module",
   "main": "dist/index.js",
   "bin": {
-    "logos-mcp-server": "dist/index.js"
+    "logos-mcp-server": "dist/index.js",
+    "logos-diagnose": "dist/cli.js"
   },
   "scripts": {
     "build": "tsc",
