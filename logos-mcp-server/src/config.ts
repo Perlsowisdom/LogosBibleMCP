@@ -36,21 +36,26 @@ function findLogosDataDir(): string {
   }
 
   if (isWindows) {
+    // Windows: Check both possible paths
     const localAppData = process.env.LOCALAPPDATA || join(homedir(), "AppData", "Local");
     
-    // Try both path patterns
-    const possiblePaths = [
-      join(localAppData, "Logos", "Documents"),           // %LOCALAPPDATA%\Logos\Documents\[id]
-      join(localAppData, "Logos", "Logos", "Documents"),  // %LOCALAPPDATA%\Logos\Logos\Documents\[id]
-    ];
+    // Try: %LOCALAPPDATA%\Logos\Documents\[random-id] (newer/some installs)
+    const logosPath1 = join(localAppData, "Logos", "Documents");
+    if (existsSync(logosPath1)) {
+      const dirs = readdirSync(logosPath1, { withFileTypes: true })
+        .filter(d => d.isDirectory() && d.name.match(/^[a-z0-9]+\.[a-z0-9]+$/i));
+      if (dirs.length > 0) {
+        return join(logosPath1, dirs[0].name);
+      }
+    }
     
-    for (const logosPath of possiblePaths) {
-      if (existsSync(logosPath)) {
-        const dirs = readdirSync(logosPath, { withFileTypes: true })
-          .filter(d => d.isDirectory() && d.name.match(/^[a-z0-9]+\.[a-z0-9]+$/i));
-        if (dirs.length > 0) {
-          return join(logosPath, dirs[0].name);
-        }
+    // Try: %LOCALAPPDATA%\Logos\Logos\Documents\[random-id] (older installs)
+    const logosPath2 = join(localAppData, "Logos", "Logos", "Documents");
+    if (existsSync(logosPath2)) {
+      const dirs = readdirSync(logosPath2, { withFileTypes: true })
+        .filter(d => d.isDirectory() && d.name.match(/^[a-z0-9]+\.[a-z0-9]+$/i));
+      if (dirs.length > 0) {
+        return join(logosPath2, dirs[0].name);
       }
     }
   }
