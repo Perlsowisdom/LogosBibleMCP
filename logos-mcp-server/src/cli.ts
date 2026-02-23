@@ -6,6 +6,7 @@ import {
   listColumns,
   getTableSample,
 } from "./services/sqlite-reader.js";
+import { getUserSermons } from "./services/sqlite-reader.js";
 import Database from "better-sqlite3";
 
 function runDiagnose() {
@@ -188,6 +189,29 @@ function runDiagnoseBlocks() {
   }
 }
 
+function runTestSermons() {
+  console.log("**Testing getUserSermons**\n");
+  
+  const sermons = getUserSermons({ limit: 3 });
+  
+  if (sermons.length === 0) {
+    console.log("No sermons found.");
+    return;
+  }
+  
+  console.log(`Found ${sermons.length} sermons:\n`);
+  
+  for (const s of sermons) {
+    console.log(`### ${s.title}`);
+    console.log(`Author: ${s.author || "Unknown"}`);
+    console.log(`Date: ${s.modifiedDate || s.createdDate || "Unknown"}`);
+    console.log(`Series: ${s.series || "None"}`);
+    console.log(`Content length: ${s.content?.length || 0} chars`);
+    console.log(`Content preview: ${s.content?.substring(0, 200) || "(no content)"}...`);
+    console.log("");
+  }
+}
+
 const command = process.argv[2];
 
 if (command === "diagnose") {
@@ -196,6 +220,8 @@ if (command === "diagnose") {
   runDiagnoseRaw();
 } else if (command === "diagnose-blocks") {
   runDiagnoseBlocks();
+} else if (command === "test-sermons") {
+  runTestSermons();
 } else {
   console.log(`Logos MCP CLI
 
@@ -205,6 +231,7 @@ Commands:
   diagnose        Check Logos data directory and database availability
   diagnose-raw    Show detailed Documents table structure for debugging
   diagnose-blocks Show Blocks table structure (where actual content lives)
+  test-sermons    Test getUserSermons function and show sample output
 `);
   process.exit(1);
 }
