@@ -443,30 +443,30 @@ export function getUserSermons(options: {
       params.push(`%${options.title}%`);
     }
 
-    // Add date filters
+    // Add date filters - use ModifiedDate as fallback since Date is often NULL
     if (afterDate) {
       if (hasBlocks) {
-        sql += " AND DATE(d.Date) >= ?";
+        sql += " AND DATE(COALESCE(d.Date, d.ModifiedDate)) >= ?";
       } else {
-        sql += " AND DATE(Date) >= ?";
+        sql += " AND DATE(COALESCE(Date, ModifiedDate)) >= ?";
       }
       params.push(afterDate);
     }
 
     if (beforeDate) {
       if (hasBlocks) {
-        sql += " AND DATE(d.Date) <= ?";
+        sql += " AND DATE(COALESCE(d.Date, d.ModifiedDate)) <= ?";
       } else {
-        sql += " AND DATE(Date) <= ?";
+        sql += " AND DATE(COALESCE(Date, ModifiedDate)) <= ?";
       }
       params.push(beforeDate);
     }
 
     if (hasBlocks) {
       sql += " GROUP BY d.Id";
-      sql += " ORDER BY d.Date DESC";
+      sql += " ORDER BY COALESCE(d.Date, d.ModifiedDate) DESC";
     } else {
-      sql += " ORDER BY Date DESC";
+      sql += " ORDER BY COALESCE(Date, ModifiedDate) DESC";
     }
 
     const limit = options.limit ?? 20;
