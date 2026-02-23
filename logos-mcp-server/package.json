@@ -4,6 +4,9 @@
   "description": "MCP server for Logos Bible Software integration",
   "type": "module",
   "main": "dist/index.js",
+  "bin": {
+    "logos-mcp-server": "dist/index.js"
+  },
   "scripts": {
     "build": "tsc",
     "dev": "tsx src/index.ts",

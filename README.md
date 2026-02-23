@@ -198,3 +198,41 @@ find ~/Library/Application\ Support/Logos4/Documents -maxdepth 1 -type d
 ## License
 
 MIT
+
+## Remote Access (Tunnel)
+
+To access your local Logos MCP from Zo or other remote clients:
+
+### 1. Start the SSE Server
+
+```powershell
+cd LogosBibleMCP\logos-mcp-server
+$env:BIBLIA_API_KEY="1fb84969450248a49fe2812d3c60b182"
+npm run build
+npm run start:sse
+```
+
+This starts an HTTP server at `http://localhost:3000` with endpoints:
+- `/sse` - SSE endpoint for MCP connections
+- `/health` - Health check
+
+### 2. Create a Tunnel with ngrok
+
+1. Install ngrok: `winget install ngrok.ngrok`
+2. Sign up at [ngrok.com](https://ngrok.com) and get your auth token
+3. Configure: `ngrok config add-authtoken YOUR_TOKEN`
+4. Create tunnel: `ngrok http 3000`
+
+ngrok will display a URL like `https://abc123.ngrok.io`.
+
+### 3. Connect from Zo
+
+Once you have the tunnel URL, configure mcporter:
+
+```bash
+mcporter config add logos --url https://your-tunnel.ngrok.io/sse
+```
+
+Or use the tunnel URL directly with any MCP client that supports SSE.
+
+**Note:** The tunnel URL changes each time you restart ngrok (unless you have a paid plan). You'll need to update the configuration with the new URL.
