@@ -352,7 +352,7 @@ export function getUserNotes(options: {
  * Decode HTML entities
  */
 function decodeHtmlEntities(text: string): string {
-  const entities = {
+  const entities: Record<string, string> = {
     '&amp;': '&',
     '&lt;': '<',
     '&gt;': '>',
