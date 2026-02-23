@@ -37,6 +37,19 @@ export function listTables(dbPath: string): string[] {
   }
 }
 
+export function listColumns(dbPath: string, tableName: string): string[] {
+  if (!existsSync(dbPath)) {
+    return [];
+  }
+  const db = openDb(dbPath);
+  try {
+    const rows = db.prepare(`PRAGMA table_info(${tableName})`).all() as Array<{ name: string }>;
+    return rows.map(r => r.name);
+  } finally {
+    db.close();
+  }
+}
+
 // ─── Highlights ──────────────────────────────────────────────────────────────
 
 export function getUserHighlights(options: {
@@ -329,10 +342,11 @@ export function getUserSermons(options: {
   
   const db = openDb(dbPath);
   try {
+    // Query the Documents table (not Sermons)
     let sql = `
-      SELECT SermonId, ExternalId, Title, ContentRichText, CreatedDate,
-             ModifiedDate, ScriptureRef, TagsJson
-      FROM Sermons
+      SELECT DocumentId, Title, Content, CreatedDate,
+             ModifiedDate, ScriptureRef, Tags
+      FROM Documents
       WHERE IsDeleted = 0
     `;
     const params: unknown[] = [];
@@ -350,27 +364,27 @@ export function getUserSermons(options: {
     }
 
     const rows = db.prepare(sql).all(...params) as Array<{
-      SermonId: number;
-      ExternalId: string;
+      DocumentId: number;
       Title: string;
-      ContentRichText: string | null;
+      Content: string | null;
       CreatedDate: string;
       ModifiedDate: string | null;
       ScriptureRef: string | null;
-      TagsJson: string | null;
+      Tags: string | null;
     }>;
 
     return rows.map((r) => ({
-      sermonId: r.SermonId,
-      externalId: r.ExternalId,
+      sermonId: r.DocumentId,
+      externalId: String(r.DocumentId),
       title: r.Title,
-      content: r.ContentRichText,
+      content: r.Content,
       createdDate: r.CreatedDate,
       modifiedDate: r.ModifiedDate,
       scriptureRef: r.ScriptureRef,
-      tagsJson: r.TagsJson,
+      tagsJson: r.Tags,
     }));
-  } catch {
+  } catch (e) {
+    console.error("Error querying sermons:", e);
     return []; // Return empty if table doesn't exist
   } finally {
     db.close();

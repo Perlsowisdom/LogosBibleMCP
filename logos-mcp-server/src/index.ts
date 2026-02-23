@@ -19,6 +19,7 @@ import {
   getUserNotes,
   getUserSermons,
   listTables,
+  listColumns,
 } from "./services/sqlite-reader.js";
 
 function text(s: string) {
@@ -42,7 +43,13 @@ async function main() {
         const exists = existsSync(path);
         if (exists) {
           const tables = listTables(path);
-          return `- **${name}**: ✓ Found\n  Path: \`${path}\`\n  Tables: ${tables.join(", ") || "(none)"}`;
+          let extra = "";
+          // For sermons, show Documents columns
+          if (name === "sermons" && tables.includes("Documents")) {
+            const columns = listColumns(path, "Documents");
+            extra = `\n  Documents columns: ${columns.join(", ")}`;
+          }
+          return `- **${name}**: ✓ Found\n  Path: \`${path}\`\n  Tables: ${tables.join(", ") || "(none)"}${extra}`;
         }
         return `- **${name}**: ✗ Not found\n  Path: \`${path}\``;
       });
@@ -56,11 +63,6 @@ async function main() {
         LOGOS_DATA_DIR 
           ? "If databases are not found, check that Logos is installed and you've created notes/highlights."
           : "**To fix:** Set the `LOGOS_DATA_DIR` environment variable to your Logos data directory.",
-        "",
-        "On Windows, run this in Command Prompt to find your data:",
-        "```",
-        `dir "%LOCALAPPDATA%\\Logos\\Logos\\Documents" /s /b | findstr /i "notestool.db"`,
-        "```",
       ];
       return text(sections.join("\n"));
     }
