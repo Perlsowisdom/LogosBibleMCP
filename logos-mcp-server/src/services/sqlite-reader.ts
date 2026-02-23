@@ -417,9 +417,10 @@ export function getUserSermons(options: {
 
     if (hasBlocks) {
       sql += " GROUP BY d.Id";
+      sql += " ORDER BY d.ModifiedDate DESC";
+    } else {
+      sql += " ORDER BY ModifiedDate DESC";
     }
-    
-    sql += " ORDER BY ModifiedDate DESC";
 
     if (options.limit) {
       sql += " LIMIT ?";
