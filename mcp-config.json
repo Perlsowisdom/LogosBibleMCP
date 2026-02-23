@@ -3,7 +3,7 @@
     "logos": {
       "command": "logos-mcp-server",
       "env": {
-        "BIBLIA_API_KEY": "YOUR_API_KEY_HERE"
+        "BIBLIA_API_KEY": "YOUR_BIBLIA_API_KEY_HERE"
       }
     }
   }

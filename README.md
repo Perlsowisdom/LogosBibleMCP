@@ -1,238 +1,210 @@
-# Logos Bible Software MCP Server
+# LogosBibleMCP
 
-A [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) server that connects AI assistants to [Logos Bible Software](https://www.logos.com/), with cross-platform support for Windows and macOS.
+MCP server for Logos Bible Software integration. Provides tools for Bible study, sermon research, and accessing your Logos data.
 
-## What This Does
+## Features
 
-- **12 MCP tools** that let AI assistants read Bible text, search Scripture, navigate Logos, access your notes/highlights/favorites, check reading plans, and explore word studies and factbook entries
-- **Cross-platform support** - Works on Windows and macOS
-- **Biblia API integration** - Fetch Bible text and search via free REST API
+- **Bible Text Retrieval**: Get passages with the Biblia API
+- **Sermon Access**: Read your sermon documents from Logos Sermon Builder
+- **Liturgical Filtering**: Filter sermons by season (Advent, Lent, Easter, etc.)
+- **Notes & Highlights**: Access your study notes and highlights
+- **Logos Integration**: Open passages, word studies, and Factbook in Logos
 
-## Prerequisites
+## Installation
 
-| Requirement | Details |
-|-------------|---------|
-| **Windows or macOS** | Windows 10/11 or macOS 10.15+ |
-| **Logos Bible Software** | Installed (tested with v48+) |
-| **Node.js** | v18+ (v20+ recommended) |
-| **Biblia API Key** | Free key from [bibliaapi.com](https://bibliaapi.com/) |
+### Prerequisites
 
-## Setup
+- Node.js 18+
+- Logos Bible Software (Windows/macOS)
+- Biblia API key (free at [bibliaapi.com](https://bibliaapi.com))
 
-### 1. Clone the repo
-
-```bash
-git clone https://github.com/Perlsowisdom/LogosBibleMCP.git
-cd LogosBibleMCP
-```
-
-### 2. Install dependencies and build
+### Setup
 
 ```bash
 cd logos-mcp-server
 npm install
 npm run build
-cd ..
+npm link  # Makes logos-mcp-server available globally
 ```
 
-### 3. Get a Biblia API key
+### Configure MCP Client
 
-1. Go to [bibliaapi.com](https://bibliaapi.com/)
-2. Sign up for a free account
-3. Copy your API key
+Add to your MCP client config (Claude Desktop, etc.):
 
-### 4. Configure environment variables
-
-Create a `.env` file in the project root:
-
-```
-BIBLIA_API_KEY=your_api_key_here
-```
-
-Or set the `BIBLIA_API_KEY` environment variable in your MCP client configuration.
-
-### 5. Configure MCP client
-
-Add to your MCP client configuration (e.g., Claude Desktop, Cline, etc.):
-
-**Windows:**
 ```json
 {
   "mcpServers": {
     "logos": {
-      "command": "node",
-      "args": ["C:/path/to/LogosBibleMCP/logos-mcp-server/dist/index.js"],
+      "command": "logos-mcp-server",
       "env": {
-        "BIBLIA_API_KEY": "your_api_key_here"
+        "BIBLIA_API_KEY": "your-api-key-here"
       }
     }
   }
 }
 ```
 
-**macOS:**
-```json
-{
-  "mcpServers": {
-    "logos": {
-      "command": "node",
-      "args": ["/path/to/LogosBibleMCP/logos-mcp-server/dist/index.js"],
-      "env": {
-        "BIBLIA_API_KEY": "your_api_key_here"
-      }
-    }
-  }
-}
-```
+## Tools
 
-## Available Tools
+### Bible Study
 
-| Tool | What it does |
+| Tool | Description |
 |------|-------------|
-| `navigate_passage` | Opens a passage in the Logos UI |
-| `get_bible_text` | Retrieves passage text (LEB default; also KJV, ASV, DARBY, YLT, WEB) |
-| `get_passage_context` | Gets a passage with surrounding verses for context |
-| `search_bible` | Searches Bible text for words, phrases, or topics |
-| `get_cross_references` | Finds related passages by extracting key terms |
-| `get_user_notes` | Reads your study notes from Logos |
-| `get_user_highlights` | Reads your highlights and visual markup |
-| `get_user_sermons` | Reads your sermon documents from Logos |
-| `get_favorites` | Lists your saved favorites/bookmarks |
-| `get_reading_progress` | Shows your reading plan status |
-| `open_word_study` | Opens a word study in Logos (Greek/Hebrew/English) |
-| `open_factbook` | Opens a Factbook entry for a person, place, or topic |
-| `get_study_workflows` | Lists available study workflow templates and active instances |
+| `get_bible_text` | Retrieve Bible passage text |
+| `get_passage_context` | Get passage with surrounding verses |
+| `search_bible` | Search Bible for terms |
+| `get_cross_references` | Find related verses |
+| `navigate_passage` | Open passage in Logos UI |
 
-## Project Structure
+### Sermon Research
+
+| Tool | Description |
+|------|-------------|
+| `get_user_sermons` | Read sermon documents from Logos |
+
+**Sermon Filtering Options:**
 
 ```
-LogosBibleMCP/
-├── logos-mcp-server/
-│   ├── package.json
-│   ├── tsconfig.json
-│   ├── src/
-│   │   ├── index.ts                   # MCP server entry point (12 tools)
-│   │   ├── config.ts                  # Cross-platform paths, API config
-│   │   ├── types.ts                   # Shared TypeScript types
-│   │   └── services/
-│   │       ├── reference-parser.ts    # Bible reference normalization
-│   │       ├── biblia-api.ts          # Biblia.com REST API client
-│   │       ├── logos-app.ts           # Cross-platform URL scheme handling
-│   │       └── sqlite-reader.ts       # Read-only Logos SQLite access
-│   └── dist/                          # Built output (after npm run build)
+get_user_sermons
+  title: "partial title match"
+  after_date: "2025-01-01"        # ISO date
+  before_date: "2025-12-31"       # ISO date
+  liturgical_season: "lent"       # advent, christmas, epiphany, lent, holy_week, easter, pentecost, ordinary
+  year: 2025                      # For liturgical season calculation
+  limit: 20                       # Max results
 ```
 
-## How It Works
+### User Data
 
-The MCP server integrates with Logos through three channels:
+| Tool | Description |
+|------|-------------|
+| `get_user_notes` | Read study notes |
+| `get_user_highlights` | Read highlights |
+| `get_favorites` | List bookmarks |
+| `get_reading_progress` | Show reading plan progress |
 
-- **Biblia API** - Retrieves Bible text and search results via the free REST API from Faithlife
-- **URL schemes** - Opens passages, word studies, and factbook entries directly in Logos using `logos4:///` URLs
-- **SQLite databases** - Reads your personal data (notes, highlights, favorites, workflows, reading plans) directly from Logos local database files (read-only, never modifies your data)
+### Logos Integration
 
-## Logos Data Paths
+| Tool | Description |
+|------|-------------|
+| `open_word_study` | Open word study in Logos |
+| `open_factbook` | Open Factbook entry |
+| `get_study_workflows` | List workflow templates |
 
-The server auto-detects your Logos data directory:
+## HTTP Server & Tunneling
 
-**Windows:**
+For remote access (e.g., tunneling to Zo Computer), use the HTTP server:
+
+### 1. Set Environment Variables
+
+```bash
+# Required
+export BIBLIA_API_KEY="your-biblia-api-key"
+
+# Required for tunneling (prevents unauthorized access)
+export LOGOS_MCP_API_KEY="your-secret-key-here"
 ```
-%LOCALAPPDATA%\Logos\Logos\Documents\[random-id]\
+
+### 2. Start HTTP Server
+
+```bash
+npm run start:http
+# or
+logos-http
 ```
 
-**macOS:**
-```
-~/Library/Application Support/Logos4/Documents/[random-id]/
+The server runs on port 3000 by default:
+- SSE endpoint: `http://localhost:3000/sse`
+- Health check: `http://localhost:3000/health`
+
+### 3. Create Tunnel
+
+Using ngrok:
+
+```bash
+ngrok http 3000
 ```
 
-If auto-detection fails, set the `LOGOS_DATA_DIR` environment variable:
+### 4. Configure mcporter
+
+On Zo Computer, update your mcporter config (`/home/workspace/config/mcporter.json`):
 
 ```json
 {
   "mcpServers": {
     "logos": {
+      "description": "Logos Bible Software (tunneled)",
+      "command": "npx",
+      "args": ["-y", "mcp-remote", "https://your-tunnel.ngrok.io/sse"],
       "env": {
-        "BIBLIA_API_KEY": "your_key",
-        "LOGOS_DATA_DIR": "C:/Users/YourName/AppData/Local/Logos/Logos/Documents/xxxxx"
+        "LOGOS_MCP_API_KEY": "${LOGOS_MCP_API_KEY}"
       }
     }
   }
 }
 ```
 
-## Finding Your Logos Data Directory
+Set the API key in Zo's Settings > Advanced > Secrets:
+- `LOGOS_MCP_API_KEY`: The same secret key you set on your Windows machine
 
-**Windows:**
-```powershell
-dir "%LOCALAPPDATA%\Logos\Logos\Documents" /b
-```
+### Windows Quick Start
 
-**macOS:**
+Run `start-tunnel.bat` which will:
+1. Prompt for required API keys
+2. Build the server if needed
+3. Start the HTTP server
+4. Display tunneling instructions
+
+## CLI Tools
+
 ```bash
-find ~/Library/Application\ Support/Logos4/Documents -maxdepth 1 -type d
+# Diagnose Logos data directory
+logos-diagnose diagnose
+
+# Show detailed database info
+logos-diagnose diagnose-raw
+
+# Show Blocks table (sermon content)
+logos-diagnose diagnose-blocks
+
+# Test sermon retrieval
+logos-diagnose test-sermons liturgical_season:"lent" year:2025
 ```
 
-## Platform-Specific Features
+## Development
 
-| Feature | Windows | macOS |
-|---------|---------|-------|
-| Bible text via Biblia API | ✅ | ✅ |
-| Search via Biblia API | ✅ | ✅ |
-| Open passages in Logos | ✅ | ✅ |
-| Open word studies | ✅ | ✅ |
-| Open Factbook | ✅ | ✅ |
-| Read notes/highlights | ✅ | ✅ |
-| Read favorites | ✅ | ✅ |
-| Read workflows | ✅ | ✅ |
-| Check if Logos running | ✅ | ✅ |
+```bash
+npm run dev        # Run with hot reload
+npm test           # Run tests
+npm run build      # Build to dist/
+```
 
 ## Troubleshooting
 
-**"BIBLIA_API_KEY is not set"** - Make sure your environment includes the API key.
+### "No sermons found"
 
-**"Database not found"** - Your Logos data path differs from the expected location. Set `LOGOS_DATA_DIR` manually.
+1. Ensure Logos is installed and has been run
+2. Check that sermons are synced locally (open Logos, go to Documents → Sermons)
+3. Run `logos-diagnose diagnose` to verify database location
 
-**Logos doesn't open passages** - Make sure Logos Bible Software is running before using navigation tools.
+### "Database not found"
 
-**Windows: "start command failed"** - Ensure Logos is properly installed and the `logos4:` URL scheme is registered.
+Set the `LOGOS_DATA_DIR` environment variable to your Logos data folder:
+
+```bash
+# Windows
+set LOGOS_DATA_DIR=C:\Users\YourName\AppData\Local\Logos\Documents\abc123.efg
+
+# macOS
+export LOGOS_DATA_DIR=~/Library/Application Support/Logos4/Data/abc123.efg
+```
+
+### MCP client shows old tool definitions
+
+1. Pull latest changes: `git pull`
+2. Rebuild: `npm run build`
+3. Restart your MCP client
 
 ## License
 
 MIT
-
-## Remote Access (Tunnel)
-
-To access your local Logos MCP from Zo or other remote clients:
-
-### 1. Start the SSE Server
-
-```powershell
-cd LogosBibleMCP\logos-mcp-server
-$env:BIBLIA_API_KEY="1fb84969450248a49fe2812d3c60b182"
-npm run build
-npm run start:sse
-```
-
-This starts an HTTP server at `http://localhost:3000` with endpoints:
-- `/sse` - SSE endpoint for MCP connections
-- `/health` - Health check
-
-### 2. Create a Tunnel with ngrok
-
-1. Install ngrok: `winget install ngrok.ngrok`
-2. Sign up at [ngrok.com](https://ngrok.com) and get your auth token
-3. Configure: `ngrok config add-authtoken YOUR_TOKEN`
-4. Create tunnel: `ngrok http 3000`
-
-ngrok will display a URL like `https://abc123.ngrok.io`.
-
-### 3. Connect from Zo
-
-Once you have the tunnel URL, configure mcporter:
-
-```bash
-mcporter config add logos --url https://your-tunnel.ngrok.io/sse
-```
-
-Or use the tunnel URL directly with any MCP client that supports SSE.
-
-**Note:** The tunnel URL changes each time you restart ngrok (unless you have a paid plan). You'll need to update the configuration with the new URL.

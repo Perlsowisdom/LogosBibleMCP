@@ -6,11 +6,15 @@
   "main": "dist/index.js",
   "bin": {
     "logos-mcp-server": "dist/index.js",
-    "logos-diagnose": "dist/cli.js"
+    "logos-diagnose": "dist/cli.js",
+    "logos-http": "dist/sse-server.js"
   },
   "scripts": {
     "build": "tsc",
     "dev": "tsx src/index.ts",
+    "start:http": "node dist/sse-server.js",
+    "start:stdio": "node dist/index.js",
+    "diagnose": "node dist/cli.js diagnose",
     "test": "vitest run",
     "test:watch": "vitest"
   },
