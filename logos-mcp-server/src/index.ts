@@ -16,6 +16,7 @@ import {
   getWorkflowInstances,
   getReadingProgress,
   getUserNotes,
+  getUserSermons,
 } from "./services/sqlite-reader.js";
 
 function text(s: string) {
@@ -257,6 +258,29 @@ async function main() {
         }
       }
       return text(sections.join("\n\n"));
+    }
+  );
+
+  // ── 13. get_user_sermons ────────────────────────────────────────────────
+  server.tool(
+    "get_user_sermons",
+    "Read the user's sermon documents from Logos Bible Software",
+    {
+      title: z.string().optional().describe("Filter by sermon title (partial match)"),
+      limit: z.number().optional().describe("Max sermons to return (default: 20)"),
+    },
+    async ({ title, limit }) => {
+      const sermons = getUserSermons({ title, limit: limit ?? 20 });
+      if (sermons.length === 0) {
+        return text("No sermons found. Note: Sermons database may not exist or may be empty.");
+      }
+      const lines = sermons.map((s) => {
+        const date = s.modifiedDate ?? s.createdDate;
+        const scripture = s.scriptureRef ? ` | **${s.scriptureRef}**` : "";
+        const content = s.content ? s.content.substring(0, 500) : "(no content)";
+        return `### ${s.title}${scripture}\n*${date}*\n\n${content}...`;
+      });
+      return text(`Found ${sermons.length} sermons:\n\n${lines.join("\n\n---\n\n")}`);
     }
   );
 

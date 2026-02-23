@@ -64,6 +64,7 @@ export const DB_PATHS = {
   notes: join(LOGOS_DATA_DIR, "NotesToolManager", "notestool.db"),
   clippings: join(LOGOS_DATA_DIR, "Documents", "Clippings", "Clippings.db"),
   passageLists: join(LOGOS_DATA_DIR, "Documents", "PassageList", "PassageList.db"),
+  sermons: join(LOGOS_DATA_DIR, "Sermons", "sermons.db"),
 } as const;
 
 // ─── Biblia API ──────────────────────────────────────────────────────────────

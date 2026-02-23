@@ -119,6 +119,19 @@ export interface ReadingProgress {
   percentComplete: number;
 }
 
+// ─── Sermon Types ─────────────────────────────────────────────────────────────
+
+export interface SermonResult {
+  sermonId: number;
+  externalId: string;
+  title: string;
+  content: string | null;
+  createdDate: string;
+  modifiedDate: string | null;
+  scriptureRef: string | null;
+  tagsJson: string | null;
+}
+
 // ─── MCP Tool Types ──────────────────────────────────────────────────────────
 
 export interface ToolDefinition {

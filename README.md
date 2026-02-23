@@ -96,6 +96,7 @@ Add to your MCP client configuration (e.g., Claude Desktop, Cline, etc.):
 | `get_cross_references` | Finds related passages by extracting key terms |
 | `get_user_notes` | Reads your study notes from Logos |
 | `get_user_highlights` | Reads your highlights and visual markup |
+| `get_user_sermons` | Reads your sermon documents from Logos |
 | `get_favorites` | Lists your saved favorites/bookmarks |
 | `get_reading_progress` | Shows your reading plan status |
 | `open_word_study` | Opens a word study in Logos (Greek/Hebrew/English) |

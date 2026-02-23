@@ -9,6 +9,7 @@ import type {
   ReadingListStatus,
   ReadingListItem,
   ReadingProgress,
+  SermonResult,
 } from "../types.js";
 
 function openDb(path: string): Database.Database {
@@ -292,6 +293,67 @@ export function getUserNotes(options: {
       anchorsJson: r.AnchorsJson,
       tagsJson: r.TagsJson,
     }));
+  } finally {
+    db.close();
+  }
+}
+
+// ─── Sermons ────────────────────────────────────────────────────────────────
+
+export function getUserSermons(options: {
+  title?: string;
+  limit?: number;
+} = {}): SermonResult[] {
+  const dbPath = DB_PATHS.sermons;
+  if (!existsSync(dbPath)) {
+    return []; // Sermons database may not exist on all systems
+  }
+  
+  const db = openDb(dbPath);
+  try {
+    let sql = `
+      SELECT SermonId, ExternalId, Title, ContentRichText, CreatedDate,
+             ModifiedDate, ScriptureRef, TagsJson
+      FROM Sermons
+      WHERE IsDeleted = 0
+    `;
+    const params: unknown[] = [];
+
+    if (options.title) {
+      sql += " AND Title LIKE ?";
+      params.push(`%${options.title}%`);
+    }
+
+    sql += " ORDER BY ModifiedDate DESC";
+
+    if (options.limit) {
+      sql += " LIMIT ?";
+      params.push(options.limit);
+    }
+
+    const rows = db.prepare(sql).all(...params) as Array<{
+      SermonId: number;
+      ExternalId: string;
+      Title: string;
+      ContentRichText: string | null;
+      CreatedDate: string;
+      ModifiedDate: string | null;
+      ScriptureRef: string | null;
+      TagsJson: string | null;
+    }>;
+
+    return rows.map((r) => ({
+      sermonId: r.SermonId,
+      externalId: r.ExternalId,
+      title: r.Title,
+      content: r.ContentRichText,
+      createdDate: r.CreatedDate,
+      modifiedDate: r.ModifiedDate,
+      scriptureRef: r.ScriptureRef,
+      tagsJson: r.TagsJson,
+    }));
+  } catch {
+    return []; // Return empty if table doesn't exist
   } finally {
     db.close();
   }
