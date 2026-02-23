@@ -36,14 +36,21 @@ function findLogosDataDir(): string {
   }
 
   if (isWindows) {
-    // Windows: %LOCALAPPDATA%\Logos\Logos\Documents\[random-id]
     const localAppData = process.env.LOCALAPPDATA || join(homedir(), "AppData", "Local");
-    const logosPath = join(localAppData, "Logos", "Logos", "Documents");
-    if (existsSync(logosPath)) {
-      const dirs = readdirSync(logosPath, { withFileTypes: true })
-        .filter(d => d.isDirectory() && d.name.match(/^[a-z0-9]+\.[a-z0-9]+$/i));
-      if (dirs.length > 0) {
-        return join(logosPath, dirs[0].name);
+    
+    // Try both path patterns
+    const possiblePaths = [
+      join(localAppData, "Logos", "Documents"),           // %LOCALAPPDATA%\Logos\Documents\[id]
+      join(localAppData, "Logos", "Logos", "Documents"),  // %LOCALAPPDATA%\Logos\Logos\Documents\[id]
+    ];
+    
+    for (const logosPath of possiblePaths) {
+      if (existsSync(logosPath)) {
+        const dirs = readdirSync(logosPath, { withFileTypes: true })
+          .filter(d => d.isDirectory() && d.name.match(/^[a-z0-9]+\.[a-z0-9]+$/i));
+        if (dirs.length > 0) {
+          return join(logosPath, dirs[0].name);
+        }
       }
     }
   }
