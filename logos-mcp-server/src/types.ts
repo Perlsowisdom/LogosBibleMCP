@@ -126,9 +126,10 @@ export interface SermonResult {
   externalId: string;
   title: string;
   content: string | null;
-  createdDate: string;
+  createdDate: string | null;
   modifiedDate: string | null;
-  scriptureRef: string | null;
+  author: string | null;
+  series: string | null;
   tagsJson: string | null;
 }
 

@@ -18,7 +18,6 @@ import {
   getReadingProgress,
   getUserNotes,
   getUserSermons,
-  getAllDocuments,
   listTables,
   listColumns,
 } from "./services/sqlite-reader.js";
@@ -306,7 +305,7 @@ async function main() {
     }
   );
 
-  // ── 13. get_user_sermons ────────────────────────────────────────────────
+  // ── 13. get_user_sermons ────────────────────────────────────────────────────
   server.tool(
     "get_user_sermons",
     "Read the user's sermon documents from Logos Bible Software",
@@ -317,39 +316,29 @@ async function main() {
     async ({ title, limit }) => {
       const sermons = getUserSermons({ title, limit: limit ?? 20 });
       if (sermons.length === 0) {
-        return text("No sermons found. Note: Sermons database may not exist or may be empty.");
+        return text(`No sermons found in local database.
+
+**Possible reasons:**
+1. **Sermons haven't synced** - Open Logos and ensure your sermons are synced to this device
+2. **Sermon Builder not used** - This tool reads from Logos Sermon Builder
+3. **Database is empty** - The local Sermon.db exists but contains no documents
+
+**To sync sermons:**
+- Open Logos Bible Software
+- Go to Documents → Sermons
+- Ensure documents are downloaded/synced locally
+
+**Sermon database location:**
+${DB_PATHS.sermons}`);
       }
       const lines = sermons.map((s) => {
-        const date = s.modifiedDate ?? s.createdDate;
-        const scripture = s.scriptureRef ? ` | **${s.scriptureRef}**` : "";
+        const date = s.modifiedDate ?? s.createdDate ?? "Unknown date";
+        const author = s.author ? ` by ${s.author}` : "";
+        const series = s.series ? ` | **Series:** ${s.series}` : "";
         const content = s.content ? s.content.substring(0, 500) : "(no content)";
-        return `### ${s.title}${scripture}\n*${date}*\n\n${content}...`;
+        return `### ${s.title}${author}${series}\n*${date}*\n\n${content}...`;
       });
       return text(`Found ${sermons.length} sermons:\n\n${lines.join("\n\n---\n\n")}`);
-    }
-  );
-
-  // ── 14. get_all_documents ────────────────────────────────────────────────
-  server.tool(
-    "get_all_documents",
-    "List all documents from Logos (sermons, notes, clippings, etc.)",
-    {
-      document_type: z.string().optional().describe("Filter by document type (e.g., 'Sermon', 'Note', 'Clipping')"),
-      title: z.string().optional().describe("Filter by title (partial match)"),
-      limit: z.number().optional().describe("Max documents to return (default: 50)"),
-    },
-    async ({ document_type, title, limit }) => {
-      const documents = getAllDocuments({ documentType: document_type, title, limit: limit ?? 50 });
-      if (documents.length === 0) {
-        return text("No documents found.");
-      }
-      const lines = documents.map((d) => {
-        const type = d.documentType ? `[${d.documentType}]` : "[Unknown]";
-        const date = d.modifiedDate ?? d.createdDate ?? "";
-        const author = d.author ? ` by ${d.author}` : "";
-        return `- **${d.title}** ${type}${author} — ${date}`;
-      });
-      return text(`Found ${documents.length} documents:\n\n${lines.join("\n")}`);
     }
   );
 
